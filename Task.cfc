@@ -16,3 +16,12 @@ component output="true" accessors="false" persistent="true" {
 		variables.closure(argumentCollection=variables.parameters);
 	}
 }
+
+<!--- IMPORTANT ABOUT THREAD ARGUMENT SCOPING:
+
+	ColdFusion makes a complete (deep) copy of all the attribute variables before passing them to the thread, so the values
+	of the variables inside the thread are independent of the values of any corresponding variables in other threads,
+	including the page thread. Thus, the values passed to threads are thread safe because the attribute values cannot be
+	changed by any other thread.
+
+--->

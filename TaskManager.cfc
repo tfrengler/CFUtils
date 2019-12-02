@@ -7,29 +7,27 @@ component output="true" accessors="false" persistent="true" {
 	property name="throttleJoinTimeout"		type="numeric"	getter="true"	setter="false";
 	property name="eventManager"			type="any"		getter="false"	setter="false";
 	property name="taskList"				type="array"	getter="false"	setter="false";
+	property name="running"					type="boolean"	getter="true"	setter="false";
 
 	public TaskManager function init(numeric maxThreads=0, numeric joinTimeout=0, numeric throttleJoinTimeout=0, EventManager eventManager) {
 
 		// Property initialization
 		variables.threadMasterList = [];
 		variables.threadThrottleWatchList = [];
-		variables.maxThreads = 3;
-		variables.joinTimeout = 120000;
-		variables.throttleJoinTimeout = 120000;
-		variables.eventManager = nullValue();
+		variables.maxThreads = (arguments.maxThreads > 0 ? arguments.maxThreads : 3);
+		variables.joinTimeout = (arguments.joinTimeout > 0 ? arguments.joinTimeout : 120000);
+		variables.throttleJoinTimeout = (arguments.throttleJoinTimeout > 0 ? arguments.throttleJoinTimeout : 120000);
+		variables.eventManager = (structKeyExists(arguments, "eventManager") ? arguments.eventManager : nullValue());
 		variables.taskList = [];
-
-		if (arguments.maxThreads > 0) variables.maxThreads = arguments.maxThreads;
-		if (arguments.joinTimeout > 0) variables.joinTimeout = arguments.joinTimeout;
-		if (arguments.throttleJoinTimeout > 0) variables.throttleJoinTimeout = arguments.throttleJoinTimeout;
-		if (structKeyExists(arguments, "eventManager")) variables.eventManager = arguments.eventManager;
+		variables.running = false;
 
 		return this;
 	}
 
-	public void function runAll(required array tasks, function callback) {
-		if (arrayIsEmpty(arguments.tasks)) return;
+	public void function runAll(required array tasks, function callback, boolean doCallbackPerTask=false) {
+		if (arrayIsEmpty(arguments.tasks) OR variables.running EQ true) return;
 
+		variables.running = true;
 		variables.taskList = arguments.tasks;
 		if (structKeyExists(variables, "eventManager")) variables.eventManager.log(data="Executing #arrayLen(variables.taskList)# tasks", calledBy=getFunctionCalledName());
 
@@ -55,18 +53,26 @@ component output="true" accessors="false" persistent="true" {
 			}
 
 			arrayAppend(variables.threadMasterList, currentTaskName);
-			arrayAppend(variables.threadThrottleWatchList, currentTaskName);
 
-			if (arrayLen(variables.threadThrottleWatchList) EQ variables.maxThreads) {
-				if (structKeyExists(variables, "eventManager")) variables.eventManager.log(data="Max threads reached (#variables.maxThreads#), waiting (#variables.throttleJoinTimeout# ms max)", calledBy=getFunctionCalledName());
-				thread action="join" name=arrayToList(variables.threadThrottleWatchList) timeout=variables.throttleJoinTimeout;
-				
-				if (structKeyExists(variables, "eventManager")) variables.eventManager.log(data="Resuming", calledBy=getFunctionCalledName());
-				arrayClear(variables.threadThrottleWatchList);
+			if (arrayLen(variables.taskList) GT variables.maxThreads) {
+				arrayAppend(variables.threadThrottleWatchList, currentTaskName);
+
+				if (arrayLen(variables.threadThrottleWatchList) EQ variables.maxThreads) {
+					if (structKeyExists(variables, "eventManager")) variables.eventManager.log(data="Max threads reached (#variables.maxThreads#), waiting (#variables.throttleJoinTimeout# ms max)", calledBy=getFunctionCalledName());
+					thread action="join" name=arrayToList(variables.threadThrottleWatchList) timeout=variables.throttleJoinTimeout;
+
+					if (structKeyExists(arguments, "callback") AND arguments.doCallbackPerTask EQ true) {
+						for(var taskName in variables.threadThrottleWatchList)
+							arguments.callback(argumentCollection=(len(cfthread[taskName].output) GT 0 ? {taskName: cfthread[taskName].output} : {}));
+					};
+					
+					if (structKeyExists(variables, "eventManager")) variables.eventManager.log(data="Resuming", calledBy=getFunctionCalledName());
+					arrayClear(variables.threadThrottleWatchList);
+				}
 			}
 		}
 
-		if (structKeyExists(arguments, "callback"))
+		if (structKeyExists(arguments, "callback") AND arguments.doCallbackPerTask EQ false)
 			variables.onAllFinished(callback=arguments.callback);
 		else 
 			variables.onAllFinished();
@@ -82,7 +88,9 @@ component output="true" accessors="false" persistent="true" {
 		var currentThread;
 		var callbackArgument = {};
 
+		variables.eventManager.log(data="Final tasks running, waiting for them to finish", calledBy=getFunctionCalledName());
 		thread action="join" name=arrayToList(variables.threadMasterList) timeout=variables.joinTimeout;
+		variables.running = false;
 
 		for(threadName in variables.threadMasterList) {
 			currentThread = cfthread[threadName];
@@ -107,6 +115,6 @@ component output="true" accessors="false" persistent="true" {
 		if (structKeyExists(variables, "eventManager")) variables.eventManager.log(data="Finished executing all tasks", calledBy=getFunctionCalledName());
 
 		if (structKeyExists(arguments, "callback"))
-			arguments.callbackArgument(callbackArgument);
+			arguments.callbackArgument(argumentCollection=callbackArgument);
 	}
 }
