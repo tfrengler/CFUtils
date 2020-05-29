@@ -174,4 +174,49 @@ JSUtils.fetchRequest = async function(
 	return Object.freeze({ERROR: false, DATA: decodedResponse.RESPONSE.DATA || null});
 };
 
+JSUtils.waitForEvent = function(emitter, eventName, timeout=0) {
+    return new Promise((resolve, reject) => {
+
+        let listener = function(data) {
+            clearTimeout(timer);
+            emitter.removeEventListener(eventName, listener);
+            resolve(data);
+        }
+
+        emitter.addEventListener(eventName, listener);
+        if (timeout < 100) return;
+
+        let timer = setTimeout(() => {
+            emitter.removeEventListener(eventName, listener);
+            reject(new Error("Timeout waiting for event: " + eventName));
+        }, timeout);
+    });
+};
+
+JSUtils.Log = function(message, type)
+{
+    const LogMessage = document.createElement("div");
+
+    if (type && type == "WARNING") {
+        LogMessage.style.backgroundColor = "orange";
+        LogMessage.style.color = "white";
+    }
+    else if (type && type == "ERROR") {
+        LogMessage.style.backgroundColor = "red";
+        LogMessage.style.color = "white";
+    }
+
+    const now = new Date(Date.now());
+    const hours = now.getHours() < 10 ? "0" + now.getHours() : now.getHours();
+    const minutes = now.getMinutes() < 10 ? "0" + now.getMinutes() : now.getMinutes();
+    const seconds = now.getSeconds() < 10 ? "0" + now.getSeconds() : now.getSeconds();
+
+    LogMessage.innerHTML = `[${hours}:${minutes}:${seconds}:${now.getMilliseconds()}]: ` + (message || "No log message? This is bad cap'n");
+
+    if (LogOutput.children.length >= 20)
+        LogOutput.removeChild(LogOutput.children[0]);
+
+    LogOutput.appendChild(LogMessage);
+}
+
 Object.freeze(JSUtils);
