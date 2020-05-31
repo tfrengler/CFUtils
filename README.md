@@ -1,4 +1,4 @@
-# CFUtils
+# FrenglerUtils (used to be CFUtils)
 Originally this was exclusively a collection of Coldfusion utility stuff gathered in one place, but I have since expanded it to include JS utilities as well
 
 ## AjaxProxy.cfc
