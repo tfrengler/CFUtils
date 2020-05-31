@@ -116,15 +116,11 @@
         <cfset var fullFilePathAndName = variables.absolutePathToLogFolder & variables.getLogFileName() & "." & arguments.fileExtension />
 
         <cfif fileExists(fullFilePathAndName) >
-            <cflock type="exclusive" name="EventLogFile_Append" timeout="5" throwontimeout="true" >
                 <cffile action="append" output=#arguments.logEntry# file=#fullFilePathAndName# charset=#variables.charset# addnewline="true" />
-            </cflock>
             <cfreturn/>
         </cfif>
 
-        <cflock type="exclusive" name="EventLogFile_WriteNew" timeout="5" throwontimeout="true" >
-            <cffile action="write" output=#arguments.logEntry# file=#fullFilePathAndName# charset=#variables.charset# addnewline="true" />
-        </cflock>
+        <cffile action="write" output=#arguments.logEntry# file=#fullFilePathAndName# charset=#variables.charset# addnewline="true" />
     </cffunction>
 
     <cffunction name="writeToScreen" returntype="string" access="private" output="true" >

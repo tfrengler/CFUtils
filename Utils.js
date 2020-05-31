@@ -7,14 +7,14 @@ JSUtils.onImageNotFound = function(event) {
 };
 
 JSUtils.deepFreeze = function(object={}) {
-    var propNames = Object.getOwnPropertyNames(object);
-    if (!propNames.length) return object;
+    var propertyNames = Object.getOwnPropertyNames(object);
+    if (!propertyNames.length) return Object.freeze(object);
 
 	// Freeze properties before freezing self
-	for (const name of propNames) {
+	for (const name of propertyNames) {
         let value = object[name];
-        if (value === null) return;
-		typeof value === typeof {} ? this.deepFreeze(value) : value;
+		if (value != null && typeof value === typeof {})
+			this.deepFreeze(value);
 	}
 
 	return Object.freeze(object);
@@ -67,12 +67,20 @@ JSUtils.deepClone = function(object) {
 	return JSON.parse(JSON.stringify(object))
 };
 
-// NOTE: Is not able to display hours. Anything above 59 minutes will be shown as minutes
-JSUtils.getReadableTime = function(time) {
+JSUtils.getReadableTimeInMinutes = function(time) {
 	time = Math.round(time);
 	const minutes = (time / 60 > 0 ? parseInt(time / 60) : 0);
 	const seconds = (time >= 60 ? time % 60 : time);
 	return `${minutes > 9 ? minutes : "0" + minutes}:${seconds > 9 ? seconds : "0" + seconds}`;
+};
+
+JSUtils.getReadableTimeInHours = function(time) {
+    time = Math.round(time);
+    const hours = (time / 3600 > 0 ? parseInt(time / 3600) : 0);
+    let minutes = (time / 60 > 0 ? parseInt(time / 60) : 0);
+    if (minutes > 59) minutes = minutes - 60;
+    const seconds = (time >= 60 ? time % 60 : time);
+    return `${hours > 9 ? hours : "0" + hours}:${minutes > 9 ? minutes : "0" + minutes}:${seconds > 9 ? seconds : "0" + seconds}`;
 };
 
 JSUtils.getReadableBytes = function(bytes) {
@@ -131,6 +139,7 @@ JSUtils.hash = function(inputString) {
 	return hash;
 };
 
+// Works in conjunction with AjaxProxy.cfc, where the variable "entryPoint" points to where that's located
 JSUtils.fetchRequest = async function(
 			entryPoint="UNDEFINED_ARGUMENT",
 			authKey="UNDEFINED_ARGUMENT",
@@ -193,6 +202,7 @@ JSUtils.waitForEvent = function(emitter, eventName, timeout=0) {
     });
 };
 
+// Obviously depends on having a reference to an element where your output goes (called LogOutput)
 JSUtils.Log = function(message, type)
 {
     const LogMessage = document.createElement("div");
