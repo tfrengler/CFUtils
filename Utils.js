@@ -202,9 +202,18 @@ JSUtils.waitForEvent = function(emitter, eventName, timeout=0) {
     });
 };
 
-// Obviously depends on having a reference to an element where your output goes (called LogOutput)
-JSUtils.Log = function(message, type)
+// 'outputHandle' is whatever element contains your log messages
+JSUtils.Log = function(outputHandle, message, type)
 {
+	if (!outputHandle || outputHandle && !(outputHandle instanceof HTMLElement))
+		throw new Error("Unable to log message. Parameter 'outputHandle' is not passed or is not an HTMLElement");
+
+    // In case an error-object is received. Normally we accept strings, but a native Error is also allowed
+    if (typeof message === typeof {} && message.message)
+		message = message.message;
+	else if (typeof message === typeof {})
+		message = `WARNING: Object with no message-attribute received (${message.constructor.name})`;
+
     const LogMessage = document.createElement("div");
 
     if (type && type == "WARNING") {
@@ -223,10 +232,22 @@ JSUtils.Log = function(message, type)
 
     LogMessage.innerHTML = `[${hours}:${minutes}:${seconds}:${now.getMilliseconds()}]: ` + (message || "No log message? This is bad cap'n");
 
-    if (LogOutput.children.length >= 20)
-        LogOutput.removeChild(LogOutput.children[0]);
+    if (outputHandle.children.length >= 40)
+        outputHandle.removeChild(outputHandle.children[0]);
 
-    LogOutput.appendChild(LogMessage);
+    outputHandle.appendChild(LogMessage);
 }
+
+JSUtils.IsLocalhost = function() {
+	return Boolean(
+		window.location.hostname === 'localhost' ||
+		// [::1] is the IPv6 localhost address.
+		window.location.hostname === '[::1]' ||
+		// 127.0.0.0/8 are considered localhost for IPv4.
+		window.location.hostname.match(
+		/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+		)
+	);
+};
 
 Object.freeze(JSUtils);
