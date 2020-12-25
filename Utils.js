@@ -250,4 +250,15 @@ JSUtils.IsLocalhost = function() {
 	);
 };
 
+JSUtils.BinaryToHex = function(binaryString) {
+	return binaryString.match(/.{4}/g).reduce(function(acc, i) {
+		return acc + parseInt(i, 2).toString(16);
+	}, '')
+};
+
+JSUtils.ToBinaryString = function(arrayBuffer) {
+	const bytes = new Uint8Array(arrayBuffer);
+	return bytes.reduce((str, byte) => str + byte.toString(2).padStart(8, '0'), '');
+};
+
 Object.freeze(JSUtils);
